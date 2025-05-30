@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SEO Analyzer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 40px;
+      margin: 0;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    #url {
+      width: 60%;
+      padding: 10px;
+      font-size: 16px;
+      margin: 20px auto;
+      display: block;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      display: block;
+      margin: 10px auto 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    #loading {
+      text-align: center;
+      font-weight: bold;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    pre {
+      background: white;
+      padding: 20px;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 800px;
+      margin: 0 auto;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <h1>SEO Insights Analyzer</h1>
+  <input type="text" id="url" placeholder="Enter website URL" />
+  <button onclick="analyze()">Analyze</button>
+  <div id="loading"></div>
+  <pre id="results"></pre>
+
+  <script>
+    async function analyze() {
+      const url = document.getElementById('url').value;
+      const loadingEl = document.getElementById('loading');
+      const resultsEl = document.getElementById('results');
+      const apiKey = 'AIzaSyDDSAxUSfKuHZVKXCKiXsahVH838IuAJN8';
+
+      loadingEl.textContent = 'Analyzing...';
+      resultsEl.textContent = '';
+
+      try {
+        const response = await fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&key=${apiKey}&category=SEO&category=PERFORMANCE&category=ACCESSIBILITY`);
+        const data = await response.json();
+
+        const lh = data.lighthouseResult;
+        if (!lh) {
+          resultsEl.textContent = 'Invalid response. Please check the URL or API key.';
+          loadingEl.textContent = '';
+          return;
+        }
+
+        const metrics = {
+          fcp: lh.audits['first-contentful-paint']?.numericValue || null,
+          lcp: lh.audits['largest-contentful-paint']?.numericValue || null,
+          cls: lh.audits['cumulative-layout-shift']?.numericValue || null,
+          seoScore: lh.categories.seo?.score ? lh.categories.seo.score * 100 : null,
+          performanceScore: lh.categories.performance?.score ? lh.categories.performance.score * 100 : null,
+          accessibilityScore: lh.categories.accessibility?.score ? lh.categories.accessibility.score * 100 : null
+        };
+
+        const opportunities = lh.audits
+          ? Object.values(lh.audits)
+              .filter(a => a.details && a.details.type === 'opportunity')
+              .map(a => a.title)
+          : [];
+
+        const structuredData = {
+          url: data.id,
+          metrics,
+          opportunities
+        };
+
+        resultsEl.textContent = JSON.stringify(structuredData, null, 2);
+      } catch (err) {
+        console.error(err);
+        resultsEl.textContent = '❌ Error fetching SEO data. See console.';
+      } finally {
+        loadingEl.textContent = '';
+      }
+    }
+  </script>
+</body>
+</html>
